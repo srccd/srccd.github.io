@@ -1,0 +1,184 @@
+<ol class="comment-list">
+				
+		<li id="comment-1340" class="comment even thread-even depth-1 parent">
+			<img alt="" src="http://0.gravatar.com/avatar/6427d459c8ad08432aed964d74b9675c?s=180&amp;d=mm&amp;r=g" srcset="http://0.gravatar.com/avatar/6427d459c8ad08432aed964d74b9675c?s=360&amp;d=mm&amp;r=g 2x" class="avatar avatar-180 photo grav-hashed grav-hijack" height="180" width="180" id="grav-6427d459c8ad08432aed964d74b9675c-0">			<div class="comment-wrap">
+				<div class="comment-top vcard">
+					<span class="comment-author">
+						<a href="http://lifeho.me" rel="external nofollow" class="url">Ivan Ip</a>					</span>
+					<span class="comment-meta comment-time">
+						 · May 11, 2014					</span>
+				</div>
+				<div id="comment-body-1340" class="comment-body">
+										<p>Is there any toggle option for markdown at the control panel?<br>
+Either way you’ve got a good choice on every article, but seems too annoying if we need to stick with HTML always.</p>
+<p>I’ve got a workaround, but not sure how to add the option into the control panel?<br>
+<a href="https://github.com/anchorcms/anchor-cms/issues/618" rel="nofollow">https://github.com/anchorcms/anchor-cms/issues/618</a></p>
+				</div>
+				<div class="reply">
+					&nbsp;				</div>
+			</div>
+	<ul class="children">
+
+		<li id="comment-1341" class="comment odd alt depth-2">
+			<img alt="" src="http://1.gravatar.com/avatar/10012c79a400b58e51cbe62e6ad32b87?s=180&amp;d=mm&amp;r=g" srcset="http://1.gravatar.com/avatar/10012c79a400b58e51cbe62e6ad32b87?s=360&amp;d=mm&amp;r=g 2x" class="avatar avatar-180 photo grav-hashed grav-hijack" height="180" width="180" id="grav-10012c79a400b58e51cbe62e6ad32b87-0">			<div class="comment-wrap">
+				<div class="comment-top vcard">
+					<span class="comment-author">
+						Roy					</span>
+					<span class="comment-meta comment-time">
+						 · May 11, 2014					</span>
+				</div>
+				<div id="comment-body-1341" class="comment-body">
+										<p>Not sure what fork or branch you are using. I’ll assume 0.9x. Such a feature was not available in the source when I used Anchor, so I had to add it – among other features.  I needed the ability to turn Markdown processing off as I had old imported posts that would not show correctly with the Markdown processor. And I didn’t want to dig into the processor itself. Because there have been changes to the source since I moved away from Anchor, many of my posts/forks/branches don’t line up. Check anchor/functions/articles.php. If you have functions called article_markdown and article_html, you should be able to simplify things. Create a custom field for Posts. In your theme, find the line that says: article_markdown. Change it to an if else statement. It should go a little something like… If the custom field is set to no, use article_html. Otherwise, use article_markdown. Hope this helps.</p>
+				</div>
+				<div class="reply">
+					&nbsp;				</div>
+			</div>
+	</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+
+		<li id="comment-1324" class="comment even thread-odd thread-alt depth-1 parent">
+			<img alt="" src="http://2.gravatar.com/avatar/b7f54e956363dfcc2e6b6ee5a9112d1e?s=180&amp;d=mm&amp;r=g" srcset="http://2.gravatar.com/avatar/b7f54e956363dfcc2e6b6ee5a9112d1e?s=360&amp;d=mm&amp;r=g 2x" class="avatar avatar-180 photo grav-hashed grav-hijack" height="180" width="180" id="grav-b7f54e956363dfcc2e6b6ee5a9112d1e-0">			<div class="comment-wrap">
+				<div class="comment-top vcard">
+					<span class="comment-author">
+						<a href="http://coletownsend.com/" rel="external nofollow" class="url">Cole Townsend</a>					</span>
+					<span class="comment-meta comment-time">
+						 · February 6, 2014					</span>
+				</div>
+				<div id="comment-body-1324" class="comment-body">
+										<p>Any way to integrate the post loop on a page outside of the “posts.php” page — say just using a function? I’m getting a timeout using my old function.</p>
+<p><b>Edit</b><b> — Fixed it! Had to call the function at the top of the page, for some reason it didn’t like me using functions.php.</b></p>
+				</div>
+				<div class="reply">
+					&nbsp;				</div>
+			</div>
+	<ul class="children">
+
+		<li id="comment-1325" class="comment odd alt depth-2 parent">
+			<img alt="" src="http://1.gravatar.com/avatar/10012c79a400b58e51cbe62e6ad32b87?s=180&amp;d=mm&amp;r=g" srcset="http://1.gravatar.com/avatar/10012c79a400b58e51cbe62e6ad32b87?s=360&amp;d=mm&amp;r=g 2x" class="avatar avatar-180 photo grav-hashed grav-hijack" height="180" width="180" id="grav-10012c79a400b58e51cbe62e6ad32b87-1">			<div class="comment-wrap">
+				<div class="comment-top vcard">
+					<span class="comment-author">
+						Roy					</span>
+					<span class="comment-meta comment-time">
+						 · February 6, 2014					</span>
+				</div>
+				<div id="comment-body-1325" class="comment-body">
+										<p>I abandoned Anchor for something more simple – homebrew. I never moved to 1.x. Not sure exactly what you are after, but you could create a script to poll the database entirely separate from Anchor, so it lists the post titles and a link to each post, or if you want it integrated into Anchor, you’d have to create a new route, function, and theme file to do what you want. I’m not sure how you had things configured before, and what could have broken them. Maybe the Anchor forum can help. Cheers!</p>
+				</div>
+				<div class="reply">
+					&nbsp;				</div>
+			</div>
+	<ul class="children">
+
+		<li id="comment-1326" class="comment even depth-3 parent">
+			<img alt="" src="http://2.gravatar.com/avatar/b7f54e956363dfcc2e6b6ee5a9112d1e?s=180&amp;d=mm&amp;r=g" srcset="http://2.gravatar.com/avatar/b7f54e956363dfcc2e6b6ee5a9112d1e?s=360&amp;d=mm&amp;r=g 2x" class="avatar avatar-180 photo grav-hashed grav-hijack" height="180" width="180" id="grav-b7f54e956363dfcc2e6b6ee5a9112d1e-1">			<div class="comment-wrap">
+				<div class="comment-top vcard">
+					<span class="comment-author">
+						<a href="http://coletownsend.com/" rel="external nofollow" class="url">Cole Townsend</a>					</span>
+					<span class="comment-meta comment-time">
+						 · February 7, 2014					</span>
+				</div>
+				<div id="comment-body-1326" class="comment-body">
+										<p>Not to worry, I’m sure I’ll come up with something.</p>
+<p>Also: what is causing the image file names to change? It seems like it’s pulling out backslashes, so instead of url(“/content/image-path.png”) I get url(“folder content image”)</p>
+<p>So looking at Page Source, I’m getting a file with a bunch of spaces unfortunately.</p>
+				</div>
+				<div class="reply">
+					&nbsp;				</div>
+			</div>
+	<ul class="children">
+
+		<li id="comment-1327" class="comment odd alt depth-4 parent">
+			<img alt="" src="http://1.gravatar.com/avatar/10012c79a400b58e51cbe62e6ad32b87?s=180&amp;d=mm&amp;r=g" srcset="http://1.gravatar.com/avatar/10012c79a400b58e51cbe62e6ad32b87?s=360&amp;d=mm&amp;r=g 2x" class="avatar avatar-180 photo grav-hashed grav-hijack" height="180" width="180" id="grav-10012c79a400b58e51cbe62e6ad32b87-2">			<div class="comment-wrap">
+				<div class="comment-top vcard">
+					<span class="comment-author">
+						Roy					</span>
+					<span class="comment-meta comment-time">
+						 · February 7, 2014					</span>
+				</div>
+				<div id="comment-body-1327" class="comment-body">
+										<p>Glad to see you fixed the first issue. Which version of Anchor are you using? One of my branches? Or straight from the Anchor team? With the issue you are noting regarding images, is this an image you are just adding via markdown, or an image being added via the custom field feature? Does it show the correct path in the database? If so, sounds like something wrong in the custom field function. Might help to have an example page or Git repo to see the issue. Good luck!</p>
+				</div>
+				<div class="reply">
+					&nbsp;				</div>
+			</div>
+	<ul class="children">
+
+		<li id="comment-1328" class="comment even depth-5 parent">
+			<img alt="" src="http://2.gravatar.com/avatar/b7f54e956363dfcc2e6b6ee5a9112d1e?s=180&amp;d=mm&amp;r=g" srcset="http://2.gravatar.com/avatar/b7f54e956363dfcc2e6b6ee5a9112d1e?s=360&amp;d=mm&amp;r=g 2x" class="avatar avatar-180 photo grav-hashed grav-hijack" height="180" width="180" id="grav-b7f54e956363dfcc2e6b6ee5a9112d1e-2">			<div class="comment-wrap">
+				<div class="comment-top vcard">
+					<span class="comment-author">
+						<a href="http://coletownsend.com/" rel="external nofollow" class="url">Cole Townsend</a>					</span>
+					<span class="comment-meta comment-time">
+						 · February 7, 2014					</span>
+				</div>
+				<div id="comment-body-1328" class="comment-body">
+										<p>I used your custom build. It seems like using the custom field feature for background images is pulling the backslashes from the url. Even if I just call in a background image (css or inline) it does this.<br>
+This link below should have a background image but it’s using the fallback css.<br>
+<a href="http://gtat.me/schilit/posts/testing" rel="nofollow">http://gtat.me/schilit/posts/testing</a></p>
+				</div>
+				<div class="reply">
+									</div>
+			</div>
+	</li><!-- #comment-## -->
+
+		<li id="comment-1329" class="comment odd alt depth-5 parent">
+			<img alt="" src="http://1.gravatar.com/avatar/10012c79a400b58e51cbe62e6ad32b87?s=180&amp;d=mm&amp;r=g" srcset="http://1.gravatar.com/avatar/10012c79a400b58e51cbe62e6ad32b87?s=360&amp;d=mm&amp;r=g 2x" class="avatar avatar-180 photo grav-hashed grav-hijack" height="180" width="180" id="grav-10012c79a400b58e51cbe62e6ad32b87-3">			<div class="comment-wrap">
+				<div class="comment-top vcard">
+					<span class="comment-author">
+						Roy					</span>
+					<span class="comment-meta comment-time">
+						 · February 10, 2014					</span>
+				</div>
+				<div id="comment-body-1329" class="comment-body">
+										<p>I can’t see your theme code, but checking your source code shows the slashes, but there is a syntax error:</p>
+<p>    style=”background-image: url(“/schilit/content/desk.png”);”</p>
+<p>Change it to:</p>
+<p>    style=’background-image: url(“/schilit/content/desk.png”);’</p>
+<p>The nested quotes could be the culprit.</p>
+				</div>
+				<div class="reply">
+									</div>
+			</div>
+	</li><!-- #comment-## -->
+
+		<li id="comment-1330" class="comment even depth-5">
+			<img alt="" src="http://2.gravatar.com/avatar/b7f54e956363dfcc2e6b6ee5a9112d1e?s=180&amp;d=mm&amp;r=g" srcset="http://2.gravatar.com/avatar/b7f54e956363dfcc2e6b6ee5a9112d1e?s=360&amp;d=mm&amp;r=g 2x" class="avatar avatar-180 photo grav-hashed grav-hijack" height="180" width="180" id="grav-b7f54e956363dfcc2e6b6ee5a9112d1e-3">			<div class="comment-wrap">
+				<div class="comment-top vcard">
+					<span class="comment-author">
+						<a href="http://coletownsend.com/" rel="external nofollow" class="url">Cole Townsend</a>					</span>
+					<span class="comment-meta comment-time">
+						 · February 10, 2014					</span>
+				</div>
+				<div id="comment-body-1330" class="comment-body">
+										<p>I feel so silly. That did the trick.</p>
+				</div>
+				<div class="reply">
+									</div>
+			</div>
+	</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+
+		<li id="comment-1349" class="comment odd alt depth-3">
+			<img alt="" src="http://0.gravatar.com/avatar/c423a96ec6d10fc0af48ff2b20ef71e3?s=180&amp;d=mm&amp;r=g" srcset="http://0.gravatar.com/avatar/c423a96ec6d10fc0af48ff2b20ef71e3?s=360&amp;d=mm&amp;r=g 2x" class="avatar avatar-180 photo grav-hashed grav-hijack" height="180" width="180" id="grav-c423a96ec6d10fc0af48ff2b20ef71e3-0">			<div class="comment-wrap">
+				<div class="comment-top vcard">
+					<span class="comment-author">
+						<a href="http://noelquiles.com" rel="external nofollow" class="url">Noel Quiles</a>					</span>
+					<span class="comment-meta comment-time">
+						 · September 1, 2014					</span>
+				</div>
+				<div id="comment-body-1349" class="comment-body">
+										<p>Would you mind sharing what your homebrew system is? I’m curious to see what you’ve made.</p>
+				</div>
+				<div class="reply">
+					&nbsp;				</div>
+			</div>
+	</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+			</ol>
