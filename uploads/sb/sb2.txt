@@ -1,0 +1,26 @@
+'Make GAIM Speak
+'Roy D 2005
+
+'SmartButler wants this
+Function Say(strText)
+on Error Resume Next
+Set objSB = WScript.CreateObject("SmartButler.DefaultObject")
+objSB.Say(strText)
+objSB = null
+End Function
+
+'This grabs the argument and creates the say command
+Function main()
+on Error Resume Next
+Set objArgs = WScript.Arguments
+if objArgs.Count < 1 then
+'keep quiet
+else
+thearg = objArgs(0)
+Call Say(thearg)
+end if
+End Function
+
+'SmartButler wants this too
+Set WshShell = WScript.CreateObject("WScript.Shell")
+Call main()

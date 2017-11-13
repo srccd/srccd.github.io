@@ -1,0 +1,40 @@
+<html>
+
+<?php
+//  "key": "t2830621", 
+$thetxt = "";
+$m = preg_match_all('/[[:space:]]?"key": "(.*?)",[[:space:]]?/', $_POST['therdiotxt'], $out3);
+if ($m) {
+	$r = array_unique($out3[1]);
+	$theamount = count($r);
+	//print_r($r);
+	$thetxt .= '<textarea name="therdiocon" style="width:400px;height:100px;">';
+	$zz = 1;
+	for ($z=0;$z<$theamount;$z++) {
+		$thetxt .= $r[$z];
+		if ($zz==30) {
+			$zz = 0;
+			$thetxt .= '</textarea><br /><br /><textarea name="therdiocon" style="width:400px;height:100px;">';
+		}else{
+			$thetxt .= ",";
+		}
+		$zz++;
+	}
+	if(substr($thetxt, -1) == ",") $thetxt = substr($thetxt, 0, -1);
+	$thetxt .= '</textarea><br /><br />';
+}
+?>
+
+<body>
+<h1>Convert the Rdio API Track Array into a list.</h1>
+<form action="process_rdio.php" method="POST">
+Enter the Rdio API text here:<br />
+<textarea name="therdiotxt" style="width:400px;height:100px;"><?=$_POST['therdiotxt']?></textarea><br />
+<input type="submit" value="Create List." />
+</form><br /><br />
+
+The set of converted track lists will appear here (limited to 30 tracks each) - Total tracks: <?=$theamount?><br />
+<?=$thetxt?>
+</body>
+
+</html>

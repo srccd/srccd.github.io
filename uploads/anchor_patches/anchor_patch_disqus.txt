@@ -1,0 +1,375 @@
+diff --git a/anchor/functions/articles.php b/anchor/functions/articles.php
+index 751e985..5444138 100755
+--- a/anchor/functions/articles.php
++++ b/anchor/functions/articles.php
+@@ -15,6 +15,30 @@ function article_slug() {
+ 	return Registry::prop('article', 'slug');
+ }
+ 
++function article_previous() {
++	$queryminmax = Post::where('created', '<', Registry::prop('article', 'created'));
++	//if($categoryminmax = Registry::prop('article', 'category')) $queryminmax->where('category', '=', $categoryminmax);
++	$postsminmax = $queryminmax->order_by('created', 'desc')->take('1')->skip('0')->get(array('slug'));
++	$postsminmax = new Items($postsminmax);
++	if($resultminmax = $postsminmax->valid()) {
++		return $postsminmax->current()->slug;
++	}else{
++		return '';
++	}
++}
++
++function article_next() {
++	$queryminmax = Post::where('created', '>', Registry::prop('article', 'created'));
++	//if($categoryminmax = Registry::prop('article', 'category')) $queryminmax->where('category', '=', $categoryminmax);
++	$postsminmax = $queryminmax->order_by('created', 'asc')->take('1')->skip('0')->get(array('slug'));
++	$postsminmax = new Items($postsminmax);
++	if($resultminmax = $postsminmax->valid()) {
++		return $postsminmax->current()->slug;
++	}else{
++		return '';
++	}
++}
++
+ function article_url() {
+ 	if($slug = article_slug()) {
+ 		$page = Registry::get('posts_page');
+diff --git a/anchor/functions/search.php b/anchor/functions/search.php
+index d22f8ea..f11cd93 100755
+--- a/anchor/functions/search.php
++++ b/anchor/functions/search.php
+@@ -10,7 +10,7 @@ function has_search_results() {
+ 		$term = Registry::get('search_term');
+ 
+ 		$query = Post::where('status', '=', 'published')
+-			->where('title', 'like', $term . '%');
++			->where('title', 'like', '%' . $term . '%');
+ 
+ 		$total = $query->count();
+ 
+@@ -31,7 +31,8 @@ function search_results() {
+ 		$term = Registry::get('search_term');
+ 
+ 		$posts = Post::where('status', '=', 'published')
+-			->where('title', 'like', $term . '%')
++			->where('title', 'like', '%' . $term . '%')
++			->order_by('created', 'desc')
+ 			->take($per_page)
+ 			->skip($page * $per_page)
+ 			->get();
+@@ -56,7 +57,7 @@ function search_term() {
+ 	return Registry::get('search_term');
+ }
+ 
+-function search_next($text = 'Next', $default = '') {
++function search_prev($text = '&larr; Previous', $default = '') {
+ 	$per_page = Config::get('meta.posts_per_page');
+ 	$page = Registry::get('page_offset');
+ 
+@@ -68,16 +69,16 @@ function search_next($text = 'Next', $default = '') {
+ 	$posts_page = Registry::get('page');
+ 	$next = $page + 1;
+ 
+-	$url = base_url($posts_page->slug . '/' . $next);
++	$url = base_url('search/' . search_term() . '/' . $next);
+ 
+ 	if(($page - 1) < $pages) {
+-		return '<a href="' . $url . '">' . $text . '</a>';
++		return '<a class="prev" href="' . $url . '">' . $text . '</a>';
+ 	}
+ 
+ 	return $default;
+ }
+ 
+-function search_prev($text = 'Previous', $default = '') {
++function search_next($text = 'Next &rarr;', $default = '') {
+ 	$per_page = Config::get('meta.posts_per_page');
+ 	$page = Registry::get('page_offset');
+ 
+@@ -89,10 +90,10 @@ function search_prev($text = 'Previous', $default = '') {
+ 	$posts_page = Registry::get('posts_page');
+ 	$prev = $page - 1;
+ 
+-	$url = base_url($posts_page->slug . '/' . $prev);
++	$url = base_url('search/' . search_term() . '/' . $prev);
+ 
+ 	if($offset > 0) {
+-		return '<a href="' . $url . '">' . $text . '</a>';
++		return '<a class="next" href="' . $url . '">' . $text . '</a>';
+ 	}
+ 
+ 	return $default;
+diff --git a/anchor/libraries/image.php b/anchor/libraries/image.php
+index bced028..c9d9f9a 100644
+--- a/anchor/libraries/image.php
++++ b/anchor/libraries/image.php
+@@ -132,11 +132,19 @@ class Image {
+ 			$ratio = $dst_w / $this->src_w;
+ 			$dst_h = $this->src_h * $ratio;
+ 		}
+-		// portrate
++		// portrait
+ 		if($this->src_w < $this->src_h) {
+ 			$ratio = $dst_h / $this->src_h;
+ 			$dst_w = $this->src_w * $ratio;
+ 		}
++		// square : use smaller value as the match
++		if($this->src_w == $this->src_h) {
++			if($dst_w > $dst_h) {
++				$dst_w = $dst_h;
++			}else{
++				$dst_h = $dst_w;
++			}
++		}
+ 
+ 		$this->dst_image = imagecreatetruecolor($dst_w, $dst_h);
+ 
+diff --git a/anchor/models/extend.php b/anchor/models/extend.php
+index ecb7678..0d88c04 100755
+--- a/anchor/models/extend.php
++++ b/anchor/models/extend.php
+@@ -170,10 +170,10 @@ class Extend extends Model {
+ 					$height = intval($extend->attributes->size->height);
+ 
+ 					// if a width and height is set and is not the same
+-					// size as the uploaed file
++					// size as the uploaed file - smaller only
+ 					if(
+ 						($width and $height) and
+-						($width <> $image->width() or $height <> $image->height())
++						($width < $image->width() or $height < $image->height())
+ 					) {
+ 						$image->resize($width, $height);
+ 
+diff --git a/anchor/views/comments/edit.php b/anchor/views/comments/edit.php
+index d459241..caf8892 100755
+--- a/anchor/views/comments/edit.php
++++ b/anchor/views/comments/edit.php
+@@ -28,7 +28,7 @@
+ 
+ 			<p>
+ 				<label><?php echo __('comments.text', 'Comment'); ?>:</label>
+-				<?php echo Form::textarea('text', Input::old('text', $comment->text)); ?>
++				<?php echo Form::textarea('text', Input::old('text', htmlspecialchars($comment->text))); ?>
+ 			</p>
+ 
+ 			<p>
+diff --git a/anchor/views/pages/edit.php b/anchor/views/pages/edit.php
+index 9047f7d..3fcb7af 100755
+--- a/anchor/views/pages/edit.php
++++ b/anchor/views/pages/edit.php
+@@ -40,7 +40,7 @@
+ 
+ 	<fieldset class="main">
+ 		<div class="wrap">
+-			<?php echo Form::textarea('content', Input::old('content', $page->content), array(
++			<?php echo Form::textarea('content', Input::old('content', htmlspecialchars($page->content)), array(
+ 				'placeholder' => __('pages.content_explain', 'Your page’s content. Uses Markdown.')
+ 			)); ?>
+ 		</div>
+diff --git a/anchor/views/posts/edit.php b/anchor/views/posts/edit.php
+index 157ba84..c38b819 100755
+--- a/anchor/views/posts/edit.php
++++ b/anchor/views/posts/edit.php
+@@ -28,7 +28,7 @@
+ 
+ 	<fieldset class="main">
+ 		<div class="wrap">
+-			<?php echo Form::textarea('html', Input::old('html', $article->html), array(
++			<?php echo Form::textarea('html', Input::old('html', htmlspecialchars($article->html)), array(
+ 				'placeholder' => __('posts.content_explain', 'Just write.')
+ 			)); ?>
+ 		</div>
+diff --git a/install/storage/htaccess.distro b/install/storage/htaccess.distro
+index 1bce232..982d53b 100644
+--- a/install/storage/htaccess.distro
++++ b/install/storage/htaccess.distro
+@@ -1,3 +1,5 @@
++Options -indexes
++
+ <IfModule mod_rewrite.c>
+ 	RewriteEngine On
+ 	RewriteBase {base}
+diff --git a/themes/default/article.php b/themes/default/article.php
+index 2617e75..11be24f 100755
+--- a/themes/default/article.php
++++ b/themes/default/article.php
+@@ -1,4 +1,5 @@
+ <?php theme_include('header'); ?>
++<?php $disqus_shortname = ''; //set to your Disqus site shortname to use disqus instead of default comment system ?>
+ 
+ 		<section class="content wrap" id="article-<?php echo article_id(); ?>">
+ 			<h1><?php echo article_title(); ?></h1>
+@@ -8,55 +9,84 @@
+ 			</article>
+ 			
+ 			<section class="footnote">
+-				<p>This article is my <?php echo numeral(article_id()); ?> oldest. It is <?php echo count_words(article_html()); ?> words long, and it’s got <?php echo total_comments() . pluralise(total_comments(), ' comment'); ?> for now. <?php echo article_custom_field('attribution'); ?></p>
++				<p>Posted <time datetime="<?php echo date(DATE_W3C, article_time()); ?>"><?php echo relative_time(article_time()); ?></time> by <?php echo article_author('real_name'); ?>.<?php if(comments_open()): ?> It has <?php if($disqus_shortname!=''): ?><a href="<?php echo article_url(); ?>#disqus_thread">0 Comments</a><?php else: echo total_comments() . pluralise(total_comments(), ' comment'); endif; ?> for now.<?php endif; ?><br/>
++					This article is my <?php echo numeral(article_id()); ?>. It is <?php echo count_words(article_html()); ?> words long. <?php echo article_custom_field('attribution'); ?><?php echo article_previous() ? ' <a href="'.article_previous().'">&laquo; Previous article</a>' : ''; ?><?php echo article_next() ? ' <a href="'.article_next().'">Next article &raquo;</a>' : ''; ?></p>
+ 			</section>
+ 		</section>
+ 
+ 		<?php if(comments_open()): ?>
+-		<section class="comments">
+-			<?php if(has_comments()): ?>
+-			<ul class="commentlist">
+-				<?php $i = 0; while(comments()): $i++; ?>
+-				<li class="comment" id="comment-<?php echo comment_id(); ?>">
+-					<div class="wrap">
+-						<h2><?php echo comment_name(); ?></h2>
+-						<time><?php echo relative_time(comment_time()); ?></time>
+-		
+-						<div class="content">
+-							<?php echo comment_text(); ?>
++			<?php if($disqus_shortname!=''): ?>
++			<section class="comments wrap">
++				<div id="disqus_thread"></div>
++				<script type="text/javascript">
++				    var disqus_shortname = '<?php echo $disqus_shortname; ?>';
++				    (function() {
++				        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
++				        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
++				        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
++				    })();
++				</script>
++				<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
++				<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
++			</section>
++			<?php else: ?>
++			<section class="comments">
++				<?php if(has_comments()): ?>
++				<ul class="commentlist">
++					<?php $i = 0; while(comments()): $i++; ?>
++					<li class="comment" id="comment-<?php echo comment_id(); ?>">
++						<div class="wrap">
++							<h2><?php echo comment_name(); ?></h2>
++							<time><?php echo relative_time(comment_time()); ?></time>
++			
++							<div class="content">
++								<?php echo comment_text(); ?>
++							</div>
++							
++							<span class="counter"><?php echo $i; ?></span>
+ 						</div>
+-						
+-						<span class="counter"><?php echo $i; ?></span>
+-					</div>
+-				</li>
+-				<?php endwhile; ?>
+-			</ul>
+-			<?php endif; ?>
++					</li>
++					<?php endwhile; ?>
++				</ul>
++				<?php endif; ?>
+ 
+-			<form id="comment" class="commentform wrap" method="post" action="<?php echo comment_form_url(); ?>#comment">
+-				<?php echo comment_form_notifications(); ?>
++				<form id="comment" class="commentform wrap" method="post" action="<?php echo comment_form_url(); ?>#comment">
++					<?php echo comment_form_notifications(); ?>
+ 
+-				<p class="name">
+-					<label for="name">Your name:</label>
+-					<?php echo comment_form_input_name('placeholder="Your name"'); ?>
+-				</p>
++					<p class="name">
++						<label for="name">Your name:</label>
++						<?php echo comment_form_input_name('placeholder="Your name"'); ?>
++					</p>
+ 
+-				<p class="email">
+-					<label for="email">Your email address:</label>
+-					<?php echo comment_form_input_email('placeholder="Your email (won’t be published)"'); ?>
+-				</p>
++					<p class="email">
++						<label for="email">Your email address:</label>
++						<?php echo comment_form_input_email('placeholder="Your email (won’t be published)"'); ?>
++					</p>
+ 
+-				<p class="textarea">
+-					<label for="text">Your comment:</label>
+-					<?php echo comment_form_input_text('placeholder="Your comment"'); ?>
+-				</p>
++					<p class="textarea">
++						<label for="text">Your comment:</label>
++						<?php echo comment_form_input_text('placeholder="Your comment"'); ?>
++					</p>
+ 
+-				<p class="submit">
+-					<?php echo comment_form_button(); ?>
+-				</p>
+-			</form>
++					<p class="submit">
++						<?php echo comment_form_button(); ?>
++					</p>
++				</form>
+ 
+-		</section>
++			</section>
++			<?php endif; ?>
+ 		<?php endif; ?>
+ 
++	<?php if($disqus_shortname!=''): ?>
++    <script type="text/javascript">
++    var disqus_shortname = '<?php echo $disqus_shortname; ?>';
++    (function () {
++        var s = document.createElement('script'); s.async = true;
++        s.type = 'text/javascript';
++        s.src = 'http://' + disqus_shortname + '.disqus.com/count.js';
++        (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
++    }());
++    </script>
++    <?php endif; ?>
++
+ <?php theme_include('footer'); ?>
+\ No newline at end of file
+diff --git a/themes/default/posts.php b/themes/default/posts.php
+index 17fac20..bee7698 100755
+--- a/themes/default/posts.php
++++ b/themes/default/posts.php
+@@ -1,4 +1,5 @@
+ <?php theme_include('header'); ?>
++<?php $disqus_shortname = ''; //set to your Disqus site shortname to use disqus instead of default comment system ?>
+ 
+ <section class="content">
+ 
+@@ -16,7 +17,7 @@
+ 					</div>
+ 
+ 					<footer>
+-						Posted <time datetime="<?php echo date(DATE_W3C, article_time()); ?>"><?php echo relative_time(article_time()); ?></time> by <?php echo article_author('real_name'); ?>.
++						Posted <time datetime="<?php echo date(DATE_W3C, article_time()); ?>"><?php echo relative_time(article_time()); ?></time> by <?php echo article_author('real_name'); ?>.<?php if(comments_open()&&$disqus_shortname!=''): ?> It has <a href="<?php echo article_url(); ?>#disqus_thread">0 Comments</a>.<?php endif; ?>
+ 					</footer>
+ 				</article>
+ 			</li>
+@@ -46,4 +47,16 @@
+ 
+ </section>
+ 
++<?php if($disqus_shortname!=''): ?>
++<script type="text/javascript">
++var disqus_shortname = '<?php echo $disqus_shortname; ?>';
++(function () {
++    var s = document.createElement('script'); s.async = true;
++    s.type = 'text/javascript';
++    s.src = 'http://' + disqus_shortname + '.disqus.com/count.js';
++    (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
++}());
++</script>
++<?php endif; ?>
++
+ <?php theme_include('footer'); ?>
+\ No newline at end of file
+diff --git a/themes/default/search.php b/themes/default/search.php
+index 480050b..78b283f 100644
+--- a/themes/default/search.php
++++ b/themes/default/search.php
+@@ -4,7 +4,7 @@
+ 
+ <?php if(has_search_results()): ?>
+ 	<ul class="items">
+-		<?php $i = 0; while(posts()): $i++; ?>
++		<?php $i = 0; while(search_results()): $i++; ?>
+ 		<li style="background: hsl(215,28%,<?php echo round((($i / posts_per_page()) * 20) + 20); ?>%);">
+ 			<article class="wrap">
+ 				<h2>

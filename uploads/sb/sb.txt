@@ -1,0 +1,63 @@
+use Gaim;
+
+#Roy D 2005
+
+# SayName: Sets SmartButler to say "Username says message"
+# SayName: 0=disabled  1=enabled
+$SayName = 0;
+
+#VBSFile: Location of the VBS file (double up the backslash)
+$VBSFile = "C:Program FilesGaimpluginssb.vbs";
+
+#********************
+#Leave the rest alone
+#********************
+
+%PLUGIN_INFO = (
+perl_api_version => 2,
+name             => "SmartButler",
+version          => "1.0",
+summary          => "Sends text to SmartButler for speech.",
+description      => "Converts text to speech with SmartButler.",
+author           => "Roy Draper nospam@digifad.com",
+url              => "http://digifad.com/",
+load             => "plugin_load",
+unload           => "plugin_unload"
+);
+
+sub plugin_init {
+return %PLUGIN_INFO;
+}
+
+sub plugin_load {
+my $plugin = shift;
+Gaim::signal_connect(Gaim::Conversations::handle, "received-im-msg", $plugin, &digi_say);
+}
+
+sub plugin_unload {
+my $plugin = shift;
+}
+
+sub digi_say {
+my ($account, $sendername, $message, $flags) = @_;
+$_ = $message;
+s/<(?:[^>'"]*:(['"]).*?1)*>//gs;
+s/'//g;
+s/"//g;
+s/(//g;
+s/)//g;
+s/>//g;
+s/<//g;
+s/;//g;
+$message = $_;
+if ($message ne ""){
+if($SayName==1){
+system ('wscript "'.$VBSFile.'" "'.$sendername.' says '.$message.'"');
+}else{
+system ('wscript "'.$VBSFile.'" "'.$message.'"');
+}
+} else {
+#do nothing
+}
+return 0;
+}

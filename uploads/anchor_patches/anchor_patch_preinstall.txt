@@ -1,0 +1,578 @@
+diff --git a/anchor/functions/articles.php b/anchor/functions/articles.php
+index 751e985..b410cd7 100755
+--- a/anchor/functions/articles.php
++++ b/anchor/functions/articles.php
+@@ -15,6 +15,30 @@ function article_slug() {
+ 	return Registry::prop('article', 'slug');
+ }
+ 
++function article_previous() {
++	$queryminmax = Post::where('created', '<', Registry::prop('article', 'created'));
++	//if($categoryminmax = Registry::prop('article', 'category')) $queryminmax->where('category', '=', $categoryminmax);
++	$postsminmax = $queryminmax->order_by('created', 'desc')->take('1')->skip('0')->get(array('slug'));
++	$postsminmax = new Items($postsminmax);
++	if($resultminmax = $postsminmax->valid()) {
++		return $postsminmax->current()->slug;
++	}else{
++		return '';
++	}
++}
++
++function article_next() {
++	$queryminmax = Post::where('created', '>', Registry::prop('article', 'created'));
++	//if($categoryminmax = Registry::prop('article', 'category')) $queryminmax->where('category', '=', $categoryminmax);
++	$postsminmax = $queryminmax->order_by('created', 'asc')->take('1')->skip('0')->get(array('slug'));
++	$postsminmax = new Items($postsminmax);
++	if($resultminmax = $postsminmax->valid()) {
++		return $postsminmax->current()->slug;
++	}else{
++		return '';
++	}
++}
++
+ function article_url() {
+ 	if($slug = article_slug()) {
+ 		$page = Registry::get('posts_page');
+@@ -27,10 +51,9 @@ function article_description() {
+ 	return Registry::prop('article', 'description');
+ }
+ 
+-function article_html() {
++function article_html($processMarkdown='yes') {
+ 	$html = Registry::prop('article', 'html');
+-
+-	return Post::parse($html);
++	return Post::parse($html, $processMarkdown);
+ }
+ 
+ function article_css() {
+diff --git a/anchor/functions/search.php b/anchor/functions/search.php
+index d22f8ea..f11cd93 100755
+--- a/anchor/functions/search.php
++++ b/anchor/functions/search.php
+@@ -10,7 +10,7 @@ function has_search_results() {
+ 		$term = Registry::get('search_term');
+ 
+ 		$query = Post::where('status', '=', 'published')
+-			->where('title', 'like', $term . '%');
++			->where('title', 'like', '%' . $term . '%');
+ 
+ 		$total = $query->count();
+ 
+@@ -31,7 +31,8 @@ function search_results() {
+ 		$term = Registry::get('search_term');
+ 
+ 		$posts = Post::where('status', '=', 'published')
+-			->where('title', 'like', $term . '%')
++			->where('title', 'like', '%' . $term . '%')
++			->order_by('created', 'desc')
+ 			->take($per_page)
+ 			->skip($page * $per_page)
+ 			->get();
+@@ -56,7 +57,7 @@ function search_term() {
+ 	return Registry::get('search_term');
+ }
+ 
+-function search_next($text = 'Next', $default = '') {
++function search_prev($text = '&larr; Previous', $default = '') {
+ 	$per_page = Config::get('meta.posts_per_page');
+ 	$page = Registry::get('page_offset');
+ 
+@@ -68,16 +69,16 @@ function search_next($text = 'Next', $default = '') {
+ 	$posts_page = Registry::get('page');
+ 	$next = $page + 1;
+ 
+-	$url = base_url($posts_page->slug . '/' . $next);
++	$url = base_url('search/' . search_term() . '/' . $next);
+ 
+ 	if(($page - 1) < $pages) {
+-		return '<a href="' . $url . '">' . $text . '</a>';
++		return '<a class="prev" href="' . $url . '">' . $text . '</a>';
+ 	}
+ 
+ 	return $default;
+ }
+ 
+-function search_prev($text = 'Previous', $default = '') {
++function search_next($text = 'Next &rarr;', $default = '') {
+ 	$per_page = Config::get('meta.posts_per_page');
+ 	$page = Registry::get('page_offset');
+ 
+@@ -89,10 +90,10 @@ function search_prev($text = 'Previous', $default = '') {
+ 	$posts_page = Registry::get('posts_page');
+ 	$prev = $page - 1;
+ 
+-	$url = base_url($posts_page->slug . '/' . $prev);
++	$url = base_url('search/' . search_term() . '/' . $prev);
+ 
+ 	if($offset > 0) {
+-		return '<a href="' . $url . '">' . $text . '</a>';
++		return '<a class="next" href="' . $url . '">' . $text . '</a>';
+ 	}
+ 
+ 	return $default;
+diff --git a/anchor/libraries/image.php b/anchor/libraries/image.php
+index bced028..580b013 100644
+--- a/anchor/libraries/image.php
++++ b/anchor/libraries/image.php
+@@ -2,8 +2,8 @@
+ 
+ class Image {
+ 
+-	private $src_image, $src_w, $src_h;
+-	private $dst_image;
++	protected $src_image, $src_w, $src_h;
++	protected $dst_image;
+ 
+ 	public function __construct($src_image, $src_w, $src_h) {
+ 		$this->src_image = $src_image;
+@@ -132,11 +132,19 @@ class Image {
+ 			$ratio = $dst_w / $this->src_w;
+ 			$dst_h = $this->src_h * $ratio;
+ 		}
+-		// portrate
++		// portrait
+ 		if($this->src_w < $this->src_h) {
+ 			$ratio = $dst_h / $this->src_h;
+ 			$dst_w = $this->src_w * $ratio;
+ 		}
++		// square : use smaller value as the match
++		if($this->src_w == $this->src_h) {
++			if($dst_w > $dst_h) {
++				$dst_w = $dst_h;
++			}else{
++				$dst_h = $dst_w;
++			}
++		}
+ 
+ 		$this->dst_image = imagecreatetruecolor($dst_w, $dst_h);
+ 
+diff --git a/anchor/libraries/imagetweak.php b/anchor/libraries/imagetweak.php
+new file mode 100644
+index 0000000..962de78
+--- /dev/null
++++ b/anchor/libraries/imagetweak.php
+@@ -0,0 +1,43 @@
++<?php
++class ImageTweak extends Image {
++	public function rotationfix($file) {
++		if(file_exists($file) === false) {
++			return false;
++		}
++		$exifofimage = @exif_read_data($file);
++		if(!empty($exifofimage['Orientation'])) {
++			switch($exifofimage['Orientation']) {
++				case 8:
++					$theexifreturn = system('/usr/bin/mogrify -rotate -90 "'.$file.'" 2>&1'); //mogrify is clockwise
++					break;
++				case 3:
++					$theexifreturn = system('/usr/bin/mogrify -rotate 180 "'.$file.'" 2>&1');
++					break;
++				case 6:
++					$theexifreturn = system('/usr/bin/mogrify -rotate 90 "'.$file.'" 2>&1');
++					break;
++			}
++		}
++		return parent::open($file);
++		return false;
++	}
++
++	public function makeathumb($file) {
++		if(file_exists($file) === false) {
++			return false;
++		}
++		//$theexifreturn = system('/usr/bin/convert -define jpeg:size=400x400 "'.$file.'" -thumbnail "250x250>" "'.$file.'_thumb.png" 2>&1'); //if you want to save some processing power
++		$theexifreturn = system('/usr/bin/convert "'.$file.'" -background transparent -thumbnail "250x250>" "'.$file.'_thumb.png" 2>&1');
++		if (strlen($theexifreturn) > 1) {
++			return false;
++		}
++		//$theexifreturn = system('/usr/bin/convert -define jpeg:size=800x800 "'.$file.'" -thumbnail "500x500>" "'.$file.'_preview.png" 2>&1'); //if you want to save some processing power
++		$theexifreturn = system('/usr/bin/convert "'.$file.'" -background transparent -thumbnail "500x500>" "'.$file.'_preview.png" 2>&1');
++		if (strlen($theexifreturn) > 1) {
++			return false;
++		}
++		return true;
++	}
++
++}
++?>
+\ No newline at end of file
+diff --git a/anchor/models/extend.php b/anchor/models/extend.php
+index ecb7678..7d85dde 100755
+--- a/anchor/models/extend.php
++++ b/anchor/models/extend.php
+@@ -164,21 +164,26 @@ class Extend extends Model {
+ 
+ 				// resize image
+ 				if(isset($extend->attributes->size->width) and isset($extend->attributes->size->height)) {
+-					$image = Image::open($filepath);
++					//$image = Image::open($filepath); //old way
++					$image = ImageTweak::rotationfix($filepath); //new way
++					//use old way if you don't have ImageMagick
++					//use the new way if you have ImageMagick and want to
++					//respect img orientation and create thumbnails
+ 
+ 					$width = intval($extend->attributes->size->width);
+ 					$height = intval($extend->attributes->size->height);
+ 
+ 					// if a width and height is set and is not the same
+-					// size as the uploaed file
++					// size as the uploaed file - smaller only
+ 					if(
+ 						($width and $height) and
+-						($width <> $image->width() or $height <> $image->height())
++						($width < $image->width() or $height < $image->height())
+ 					) {
+ 						$image->resize($width, $height);
+ 
+ 						$image->output($ext, $filepath);
+ 					}
++					$image->makeathumb($filepath);
+ 				}
+ 
+ 				return Json::encode(compact('name', 'filename'));
+diff --git a/anchor/models/post.php b/anchor/models/post.php
+index 258d462..e002d3d 100755
+--- a/anchor/models/post.php
++++ b/anchor/models/post.php
+@@ -18,7 +18,7 @@ class Post extends Model {
+ 		return static::where('slug', 'like', $slug)->fetch();
+ 	}
+ 
+-	public static function parse($str) {
++	public static function parse($str, $markitdown='yes') {
+ 		// process tags
+ 		//$pattern = '/[\{\{|\[\[]+([a-z]+)[\}\}|\]\]]+/i';
+ 		$pattern = '/[\{\{]{1}([a-z]+)[\}\}]{1}/i';
+@@ -33,9 +33,11 @@ class Post extends Model {
+ 			$str = str_replace($search, $replace, $str);
+ 		}
+ 
+-		$md = new Markdown;
+-
+-		return $md->transform($str);
++		if ($markitdown=='yes') {
++			$md = new Markdown;
++			$str = $md->transform($str);
++		}
++		return $str;
+ 	}
+ 
+ }
+\ No newline at end of file
+diff --git a/anchor/views/comments/edit.php b/anchor/views/comments/edit.php
+index d459241..caf8892 100755
+--- a/anchor/views/comments/edit.php
++++ b/anchor/views/comments/edit.php
+@@ -28,7 +28,7 @@
+ 
+ 			<p>
+ 				<label><?php echo __('comments.text', 'Comment'); ?>:</label>
+-				<?php echo Form::textarea('text', Input::old('text', $comment->text)); ?>
++				<?php echo Form::textarea('text', Input::old('text', htmlspecialchars($comment->text))); ?>
+ 			</p>
+ 
+ 			<p>
+diff --git a/anchor/views/pages/edit.php b/anchor/views/pages/edit.php
+index 9047f7d..3fcb7af 100755
+--- a/anchor/views/pages/edit.php
++++ b/anchor/views/pages/edit.php
+@@ -40,7 +40,7 @@
+ 
+ 	<fieldset class="main">
+ 		<div class="wrap">
+-			<?php echo Form::textarea('content', Input::old('content', $page->content), array(
++			<?php echo Form::textarea('content', Input::old('content', htmlspecialchars($page->content)), array(
+ 				'placeholder' => __('pages.content_explain', 'Your page’s content. Uses Markdown.')
+ 			)); ?>
+ 		</div>
+diff --git a/anchor/views/posts/edit.php b/anchor/views/posts/edit.php
+index 157ba84..c38b819 100755
+--- a/anchor/views/posts/edit.php
++++ b/anchor/views/posts/edit.php
+@@ -28,7 +28,7 @@
+ 
+ 	<fieldset class="main">
+ 		<div class="wrap">
+-			<?php echo Form::textarea('html', Input::old('html', $article->html), array(
++			<?php echo Form::textarea('html', Input::old('html', htmlspecialchars($article->html)), array(
+ 				'placeholder' => __('posts.content_explain', 'Just write.')
+ 			)); ?>
+ 		</div>
+diff --git a/install/storage/htaccess.distro b/install/storage/htaccess.distro
+index 1bce232..982d53b 100644
+--- a/install/storage/htaccess.distro
++++ b/install/storage/htaccess.distro
+@@ -1,3 +1,5 @@
++Options -indexes
++
+ <IfModule mod_rewrite.c>
+ 	RewriteEngine On
+ 	RewriteBase {base}
+diff --git a/system/html.php b/system/html.php
+index f4117ad..db8b76d 100644
+--- a/system/html.php
++++ b/system/html.php
+@@ -59,9 +59,12 @@ class Html {
+ 		return static::element('a', $title, $attributes);
+ 	}
+ 	
+-	public static function Markdown($text) {
+-		$md = new \Markdown;
+-		return $md->transform($text);
++	public static function Markdown($text, $markitdown='yes') {
++		if ($markitdown=='yes') {
++			$md = new \Markdown;
++			$text = $md->transform($text);
++		}
++		return $text;
+ 	}
+ 
+ }
+\ No newline at end of file
+diff --git a/themes/default/article.php b/themes/default/article.php
+index 2617e75..696091d 100755
+--- a/themes/default/article.php
++++ b/themes/default/article.php
+@@ -1,62 +1,108 @@
+ <?php theme_include('header'); ?>
++<?php $disqus_shortname = ''; //set to your Disqus site shortname to use disqus instead of default comment system ?>
+ 
+ 		<section class="content wrap" id="article-<?php echo article_id(); ?>">
+ 			<h1><?php echo article_title(); ?></h1>
+ 
+ 			<article>
+-				<?php echo article_html(); ?>
++				<?php
++				echo article_custom_field('attachimg1') ? '<p><a href="'.article_custom_field('attachimg1').'"><img src="'.article_custom_field('attachimg1').'_preview.png" alt="Attached Image." /></a></p>' : '';
++				if (($theext = @pathinfo(article_custom_field('attachfile1'), PATHINFO_EXTENSION))=="webm"||$theext=="mp4") echo '<video id="attachvideo" class="video-js vjs-default-skin" width="400" height="240" controls preload="none" data-setup="{}"><source src="'.article_custom_field('attachfile1').'" type=\'video/webm; codecs="vp8, vorbis"\' /></video><script>var attachvideo = _V_("attachvideo");</script>';
++				echo article_custom_field('videohuluid') ? '<iframe width="500" height="281" src="http://www.hulu.com/embed.html?eid='.article_custom_field('videohuluid').'" frameborder="0" scrolling="no" webkitAllowFullScreen mozallowfullscreen allowfullscreen></iframe> <p><a href="http://hulu.com/watch/?eid='.article_custom_field('videohuluid').'">See at Hulu</a>.</p>' : '';
++				echo article_custom_field('videoyoutubeid') ? '<iframe width="500" height="281" src="http://www.youtube.com/embed/'.article_custom_field('videoyoutubeid').'" frameborder="0" allowfullscreen></iframe> <p><a href="http://youtu.be/'.article_custom_field('videoyoutubeid').'">See at YouTube</a>.</p>' : '';
++				echo article_custom_field('videovimeoid') ? '<iframe src="http://player.vimeo.com/video/'.article_custom_field('videovimeoid').'" width="500" height="281" frameborder="0" webkitAllowFullScreen mozallowfullscreen allowFullScreen></iframe> <p><a href="http://vimeo.com/'.article_custom_field('videovimeoid').'">See at Vimeo</a>.</p>' : '';
++				echo article_html(article_custom_field('processmarkdown')?article_custom_field('processmarkdown'):'yes'); //allows ignoring markdown for certain articles
++				if ($theext!="webm") echo article_custom_field('attachfile1') ? '<p>Attachment: <a href="'.article_custom_field('attachfile1').'">'.article_custom_field('attachfile1').'</a></p>' : '';
++				if (article_custom_field('attachimg2')||article_custom_field('attachimg3')||article_custom_field('attachimg4')||article_custom_field('attachimg5')) {
++					echo '<p></p><div class="attachimgcontainer">';
++					echo article_custom_field('attachimg2') ? '<a href="'.article_custom_field('attachimg2').'"><img src="'.article_custom_field('attachimg2').'_thumb.png" alt="Attached Image." /></a>' : '';
++					echo article_custom_field('attachimg3') ? '<a href="'.article_custom_field('attachimg3').'"><img src="'.article_custom_field('attachimg3').'_thumb.png" alt="Attached Image." /></a>' : '';
++					echo article_custom_field('attachimg4') ? '<a href="'.article_custom_field('attachimg4').'"><img src="'.article_custom_field('attachimg4').'_thumb.png" alt="Attached Image." /></a>' : '';
++					echo article_custom_field('attachimg5') ? '<a href="'.article_custom_field('attachimg5').'"><img src="'.article_custom_field('attachimg5').'_thumb.png" alt="Attached Image." /></a>' : '';
++					echo "</div>";
++				}
++				?>
+ 			</article>
+ 			
+ 			<section class="footnote">
+-				<p>This article is my <?php echo numeral(article_id()); ?> oldest. It is <?php echo count_words(article_html()); ?> words long, and it’s got <?php echo total_comments() . pluralise(total_comments(), ' comment'); ?> for now. <?php echo article_custom_field('attribution'); ?></p>
++				<p>Posted <time datetime="<?php echo date(DATE_W3C, article_time()); ?>"><?php echo relative_time(article_time()); ?></time> by <?php echo article_author('real_name'); ?>.<?php if(comments_open()): ?> It has <?php if($disqus_shortname!=''): ?><a href="<?php echo article_url(); ?>#disqus_thread">0 Comments</a><?php else: echo total_comments() . pluralise(total_comments(), ' comment'); endif; ?> for now.<?php endif; ?><br/>
++					This article is my <?php echo numeral(article_id()); ?>. It is <?php echo count_words(article_html()); ?> words long. <?php echo article_custom_field('attribution'); ?><?php echo article_previous() ? ' <a href="'.article_previous().'">&laquo; Previous article</a>' : ''; ?><?php echo article_next() ? ' <a href="'.article_next().'">Next article &raquo;</a>' : ''; ?><?php echo article_custom_field('tags') ? '<br/>Tagged: '.article_custom_field('tags') : ''; ?></p>
+ 			</section>
+ 		</section>
+ 
+ 		<?php if(comments_open()): ?>
+-		<section class="comments">
+-			<?php if(has_comments()): ?>
+-			<ul class="commentlist">
+-				<?php $i = 0; while(comments()): $i++; ?>
+-				<li class="comment" id="comment-<?php echo comment_id(); ?>">
+-					<div class="wrap">
+-						<h2><?php echo comment_name(); ?></h2>
+-						<time><?php echo relative_time(comment_time()); ?></time>
+-		
+-						<div class="content">
+-							<?php echo comment_text(); ?>
++			<?php if($disqus_shortname!=''): ?>
++			<section class="comments wrap">
++				<div id="disqus_thread"></div>
++				<script type="text/javascript">
++				    var disqus_shortname = '<?php echo $disqus_shortname; ?>';
++				    (function() {
++				        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
++				        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
++				        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
++				    })();
++				</script>
++				<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
++				<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
++			</section>
++			<?php else: ?>
++			<section class="comments">
++				<?php if(has_comments()): ?>
++				<ul class="commentlist">
++					<?php $i = 0; while(comments()): $i++; ?>
++					<li class="comment" id="comment-<?php echo comment_id(); ?>">
++						<div class="wrap">
++							<h2><?php echo comment_name(); ?></h2>
++							<time><?php echo relative_time(comment_time()); ?></time>
++			
++							<div class="content">
++								<?php echo comment_text(); ?>
++							</div>
++							
++							<span class="counter"><?php echo $i; ?></span>
+ 						</div>
+-						
+-						<span class="counter"><?php echo $i; ?></span>
+-					</div>
+-				</li>
+-				<?php endwhile; ?>
+-			</ul>
+-			<?php endif; ?>
++					</li>
++					<?php endwhile; ?>
++				</ul>
++				<?php endif; ?>
+ 
+-			<form id="comment" class="commentform wrap" method="post" action="<?php echo comment_form_url(); ?>#comment">
+-				<?php echo comment_form_notifications(); ?>
++				<form id="comment" class="commentform wrap" method="post" action="<?php echo comment_form_url(); ?>#comment">
++					<?php echo comment_form_notifications(); ?>
+ 
+-				<p class="name">
+-					<label for="name">Your name:</label>
+-					<?php echo comment_form_input_name('placeholder="Your name"'); ?>
+-				</p>
++					<p class="name">
++						<label for="name">Your name:</label>
++						<?php echo comment_form_input_name('placeholder="Your name"'); ?>
++					</p>
+ 
+-				<p class="email">
+-					<label for="email">Your email address:</label>
+-					<?php echo comment_form_input_email('placeholder="Your email (won’t be published)"'); ?>
+-				</p>
++					<p class="email">
++						<label for="email">Your email address:</label>
++						<?php echo comment_form_input_email('placeholder="Your email (won’t be published)"'); ?>
++					</p>
+ 
+-				<p class="textarea">
+-					<label for="text">Your comment:</label>
+-					<?php echo comment_form_input_text('placeholder="Your comment"'); ?>
+-				</p>
++					<p class="textarea">
++						<label for="text">Your comment:</label>
++						<?php echo comment_form_input_text('placeholder="Your comment"'); ?>
++					</p>
+ 
+-				<p class="submit">
+-					<?php echo comment_form_button(); ?>
+-				</p>
+-			</form>
++					<p class="submit">
++						<?php echo comment_form_button(); ?>
++					</p>
++				</form>
+ 
+-		</section>
++			</section>
++			<?php endif; ?>
+ 		<?php endif; ?>
+ 
++	<?php if($disqus_shortname!=''): ?>
++    <script type="text/javascript">
++    var disqus_shortname = '<?php echo $disqus_shortname; ?>';
++    (function () {
++        var s = document.createElement('script'); s.async = true;
++        s.type = 'text/javascript';
++        s.src = 'http://' + disqus_shortname + '.disqus.com/count.js';
++        (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
++    }());
++    </script>
++    <?php endif; ?>
++
+ <?php theme_include('footer'); ?>
+\ No newline at end of file
+diff --git a/themes/default/css/custom.css b/themes/default/css/custom.css
+new file mode 100644
+index 0000000..d8fccff
+--- /dev/null
++++ b/themes/default/css/custom.css
+@@ -0,0 +1,4 @@
++/**
++ *   For your personal CSS or overrides
++ */
++
+diff --git a/themes/default/header.php b/themes/default/header.php
+index a361424..11c5496 100755
+--- a/themes/default/header.php
++++ b/themes/default/header.php
+@@ -9,6 +9,7 @@
+ 		<link rel="stylesheet" href="<?php echo theme_url('/css/reset.css'); ?>">
+ 		<link rel="stylesheet" href="<?php echo theme_url('/css/style.css'); ?>">
+ 		<link rel="stylesheet" href="<?php echo theme_url('/css/small.css'); ?>" media="(max-width: 400px)">
++		<link rel="stylesheet" href="<?php echo theme_url('/css/custom.css'); ?>">
+ 
+ 		<link rel="alternate" type="application/rss+xml" title="RSS" href="<?php echo rss_url(); ?>">
+ 		<link rel="shortcut icon" href="<?php echo theme_url('img/favicon.png'); ?>">
+@@ -38,6 +39,11 @@
+     		<!--  Custom Javascript -->
+     		<script><?php echo article_js(); ?></script>
+ 		<?php endif; ?>
++
++		<?php if (($theext = @pathinfo(article_custom_field('attachfile1'), PATHINFO_EXTENSION))=="webm"||$theext=="mp4"): ?>
++			<link href="http://vjs.zencdn.net/c/video-js.css" rel="stylesheet">
++			<script src="http://vjs.zencdn.net/c/video.js"></script>
++		<?php endif; ?>
+ 	</head>
+ 	<body class="<?php echo body_class(); ?>">
+ 		<div class="main-wrap">
+diff --git a/themes/default/posts.php b/themes/default/posts.php
+index 17fac20..07cb316 100755
+--- a/themes/default/posts.php
++++ b/themes/default/posts.php
+@@ -1,4 +1,5 @@
+ <?php theme_include('header'); ?>
++<?php $disqus_shortname = ''; //set to your Disqus site shortname to use disqus instead of default comment system ?>
+ 
+ <section class="content">
+ 
+@@ -12,11 +13,15 @@
+ 					</h1>
+ 
+ 					<div class="content">
+-						<?php echo Html::markdown(article_html()); ?>
++						<?php
++						echo article_custom_field('attachimg1') ? '<p><a href="'.article_custom_field('attachimg1').'"><img src="'.article_custom_field('attachimg1').'_preview.png" alt="Attached Image." /></a></p>' : '';
++						echo Html::markdown(article_html(article_custom_field('processmarkdown')?article_custom_field('processmarkdown'):'yes'),article_custom_field('processmarkdown')?article_custom_field('processmarkdown'):'yes'); // this is doing a dance around markdown for items that don't want it
++						if (article_custom_field('attachimg2')||article_custom_field('attachimg3')||article_custom_field('attachimg4')||article_custom_field('attachimg5')||article_custom_field('attachfile1')||article_custom_field('videohuluid')||article_custom_field('videoyoutubeid')||article_custom_field('videovimeoid')) echo "<br /><a href=\"".article_url()."\" title=\"".article_title()."\">See more</a>.";
++						?>
+ 					</div>
+ 
+ 					<footer>
+-						Posted <time datetime="<?php echo date(DATE_W3C, article_time()); ?>"><?php echo relative_time(article_time()); ?></time> by <?php echo article_author('real_name'); ?>.
++						Posted <time datetime="<?php echo date(DATE_W3C, article_time()); ?>"><?php echo relative_time(article_time()); ?></time> by <?php echo article_author('real_name'); ?>.<?php if(comments_open()&&$disqus_shortname!=''): ?> It has <a href="<?php echo article_url(); ?>#disqus_thread">0 Comments</a>.<?php endif; ?><?php echo article_custom_field('tags') ? '<br/>Tagged: '.article_custom_field('tags') : ''; ?>
+ 					</footer>
+ 				</article>
+ 			</li>
+@@ -46,4 +51,16 @@
+ 
+ </section>
+ 
++<?php if($disqus_shortname!=''): ?>
++<script type="text/javascript">
++var disqus_shortname = '<?php echo $disqus_shortname; ?>';
++(function () {
++    var s = document.createElement('script'); s.async = true;
++    s.type = 'text/javascript';
++    s.src = 'http://' + disqus_shortname + '.disqus.com/count.js';
++    (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
++}());
++</script>
++<?php endif; ?>
++
+ <?php theme_include('footer'); ?>
+\ No newline at end of file
+diff --git a/themes/default/search.php b/themes/default/search.php
+index 480050b..78b283f 100644
+--- a/themes/default/search.php
++++ b/themes/default/search.php
+@@ -4,7 +4,7 @@
+ 
+ <?php if(has_search_results()): ?>
+ 	<ul class="items">
+-		<?php $i = 0; while(posts()): $i++; ?>
++		<?php $i = 0; while(search_results()): $i++; ?>
+ 		<li style="background: hsl(215,28%,<?php echo round((($i / posts_per_page()) * 20) + 20); ?>%);">
+ 			<article class="wrap">
+ 				<h2>

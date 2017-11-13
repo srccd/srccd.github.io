@@ -1,0 +1,238 @@
+diff --git a/anchor/functions/search.php b/anchor/functions/search.php
+index d22f8ea..f11cd93 100755
+--- a/anchor/functions/search.php
++++ b/anchor/functions/search.php
+@@ -10,7 +10,7 @@ function has_search_results() {
+ 		$term = Registry::get('search_term');
+ 
+ 		$query = Post::where('status', '=', 'published')
+-			->where('title', 'like', $term . '%');
++			->where('title', 'like', '%' . $term . '%');
+ 
+ 		$total = $query->count();
+ 
+@@ -31,7 +31,8 @@ function search_results() {
+ 		$term = Registry::get('search_term');
+ 
+ 		$posts = Post::where('status', '=', 'published')
+-			->where('title', 'like', $term . '%')
++			->where('title', 'like', '%' . $term . '%')
++			->order_by('created', 'desc')
+ 			->take($per_page)
+ 			->skip($page * $per_page)
+ 			->get();
+@@ -56,7 +57,7 @@ function search_term() {
+ 	return Registry::get('search_term');
+ }
+ 
+-function search_next($text = 'Next', $default = '') {
++function search_prev($text = '&larr; Previous', $default = '') {
+ 	$per_page = Config::get('meta.posts_per_page');
+ 	$page = Registry::get('page_offset');
+ 
+@@ -68,16 +69,16 @@ function search_next($text = 'Next', $default = '') {
+ 	$posts_page = Registry::get('page');
+ 	$next = $page + 1;
+ 
+-	$url = base_url($posts_page->slug . '/' . $next);
++	$url = base_url('search/' . search_term() . '/' . $next);
+ 
+ 	if(($page - 1) < $pages) {
+-		return '<a href="' . $url . '">' . $text . '</a>';
++		return '<a class="prev" href="' . $url . '">' . $text . '</a>';
+ 	}
+ 
+ 	return $default;
+ }
+ 
+-function search_prev($text = 'Previous', $default = '') {
++function search_next($text = 'Next &rarr;', $default = '') {
+ 	$per_page = Config::get('meta.posts_per_page');
+ 	$page = Registry::get('page_offset');
+ 
+@@ -89,10 +90,10 @@ function search_prev($text = 'Previous', $default = '') {
+ 	$posts_page = Registry::get('posts_page');
+ 	$prev = $page - 1;
+ 
+-	$url = base_url($posts_page->slug . '/' . $prev);
++	$url = base_url('search/' . search_term() . '/' . $prev);
+ 
+ 	if($offset > 0) {
+-		return '<a href="' . $url . '">' . $text . '</a>';
++		return '<a class="next" href="' . $url . '">' . $text . '</a>';
+ 	}
+ 
+ 	return $default;
+diff --git a/anchor/libraries/image.php b/anchor/libraries/image.php
+index bced028..580b013 100644
+--- a/anchor/libraries/image.php
++++ b/anchor/libraries/image.php
+@@ -2,8 +2,8 @@
+ 
+ class Image {
+ 
+-	private $src_image, $src_w, $src_h;
+-	private $dst_image;
++	protected $src_image, $src_w, $src_h;
++	protected $dst_image;
+ 
+ 	public function __construct($src_image, $src_w, $src_h) {
+ 		$this->src_image = $src_image;
+@@ -132,11 +132,19 @@ class Image {
+ 			$ratio = $dst_w / $this->src_w;
+ 			$dst_h = $this->src_h * $ratio;
+ 		}
+-		// portrate
++		// portrait
+ 		if($this->src_w < $this->src_h) {
+ 			$ratio = $dst_h / $this->src_h;
+ 			$dst_w = $this->src_w * $ratio;
+ 		}
++		// square : use smaller value as the match
++		if($this->src_w == $this->src_h) {
++			if($dst_w > $dst_h) {
++				$dst_w = $dst_h;
++			}else{
++				$dst_h = $dst_w;
++			}
++		}
+ 
+ 		$this->dst_image = imagecreatetruecolor($dst_w, $dst_h);
+ 
+diff --git a/anchor/libraries/imagetweak.php b/anchor/libraries/imagetweak.php
+new file mode 100644
+index 0000000..962de78
+--- /dev/null
++++ b/anchor/libraries/imagetweak.php
+@@ -0,0 +1,43 @@
++<?php
++class ImageTweak extends Image {
++	public function rotationfix($file) {
++		if(file_exists($file) === false) {
++			return false;
++		}
++		$exifofimage = @exif_read_data($file);
++		if(!empty($exifofimage['Orientation'])) {
++			switch($exifofimage['Orientation']) {
++				case 8:
++					$theexifreturn = system('/usr/bin/mogrify -rotate -90 "'.$file.'" 2>&1'); //mogrify is clockwise
++					break;
++				case 3:
++					$theexifreturn = system('/usr/bin/mogrify -rotate 180 "'.$file.'" 2>&1');
++					break;
++				case 6:
++					$theexifreturn = system('/usr/bin/mogrify -rotate 90 "'.$file.'" 2>&1');
++					break;
++			}
++		}
++		return parent::open($file);
++		return false;
++	}
++
++	public function makeathumb($file) {
++		if(file_exists($file) === false) {
++			return false;
++		}
++		//$theexifreturn = system('/usr/bin/convert -define jpeg:size=400x400 "'.$file.'" -thumbnail "250x250>" "'.$file.'_thumb.png" 2>&1'); //if you want to save some processing power
++		$theexifreturn = system('/usr/bin/convert "'.$file.'" -background transparent -thumbnail "250x250>" "'.$file.'_thumb.png" 2>&1');
++		if (strlen($theexifreturn) > 1) {
++			return false;
++		}
++		//$theexifreturn = system('/usr/bin/convert -define jpeg:size=800x800 "'.$file.'" -thumbnail "500x500>" "'.$file.'_preview.png" 2>&1'); //if you want to save some processing power
++		$theexifreturn = system('/usr/bin/convert "'.$file.'" -background transparent -thumbnail "500x500>" "'.$file.'_preview.png" 2>&1');
++		if (strlen($theexifreturn) > 1) {
++			return false;
++		}
++		return true;
++	}
++
++}
++?>
+\ No newline at end of file
+diff --git a/anchor/models/extend.php b/anchor/models/extend.php
+index ecb7678..0be0fd5 100755
+--- a/anchor/models/extend.php
++++ b/anchor/models/extend.php
+@@ -164,7 +164,11 @@ class Extend extends Model {
+ 
+ 				// resize image
+ 				if(isset($extend->attributes->size->width) and isset($extend->attributes->size->height)) {
+-					$image = Image::open($filepath);
++					//$image = Image::open($filepath); //old way
++					$image = ImageTweak::rotationfix($filepath); //new way
++					//use old way if you don't have ImageMagick
++					//use the new way if you have ImageMagick and want to
++					//respect img orientation and create thumbnails
+ 
+ 					$width = intval($extend->attributes->size->width);
+ 					$height = intval($extend->attributes->size->height);
+@@ -179,6 +183,7 @@ class Extend extends Model {
+ 
+ 						$image->output($ext, $filepath);
+ 					}
++					$image->makeathumb($filepath);
+ 				}
+ 
+ 				return Json::encode(compact('name', 'filename'));
+diff --git a/anchor/views/comments/edit.php b/anchor/views/comments/edit.php
+index d459241..caf8892 100755
+--- a/anchor/views/comments/edit.php
++++ b/anchor/views/comments/edit.php
+@@ -28,7 +28,7 @@
+ 
+ 			<p>
+ 				<label><?php echo __('comments.text', 'Comment'); ?>:</label>
+-				<?php echo Form::textarea('text', Input::old('text', $comment->text)); ?>
++				<?php echo Form::textarea('text', Input::old('text', htmlspecialchars($comment->text))); ?>
+ 			</p>
+ 
+ 			<p>
+diff --git a/anchor/views/pages/edit.php b/anchor/views/pages/edit.php
+index 9047f7d..3fcb7af 100755
+--- a/anchor/views/pages/edit.php
++++ b/anchor/views/pages/edit.php
+@@ -40,7 +40,7 @@
+ 
+ 	<fieldset class="main">
+ 		<div class="wrap">
+-			<?php echo Form::textarea('content', Input::old('content', $page->content), array(
++			<?php echo Form::textarea('content', Input::old('content', htmlspecialchars($page->content)), array(
+ 				'placeholder' => __('pages.content_explain', 'Your page’s content. Uses Markdown.')
+ 			)); ?>
+ 		</div>
+diff --git a/anchor/views/posts/edit.php b/anchor/views/posts/edit.php
+index 157ba84..c38b819 100755
+--- a/anchor/views/posts/edit.php
++++ b/anchor/views/posts/edit.php
+@@ -28,7 +28,7 @@
+ 
+ 	<fieldset class="main">
+ 		<div class="wrap">
+-			<?php echo Form::textarea('html', Input::old('html', $article->html), array(
++			<?php echo Form::textarea('html', Input::old('html', htmlspecialchars($article->html)), array(
+ 				'placeholder' => __('posts.content_explain', 'Just write.')
+ 			)); ?>
+ 		</div>
+diff --git a/install/storage/htaccess.distro b/install/storage/htaccess.distro
+index 1bce232..982d53b 100644
+--- a/install/storage/htaccess.distro
++++ b/install/storage/htaccess.distro
+@@ -1,3 +1,5 @@
++Options -indexes
++
+ <IfModule mod_rewrite.c>
+ 	RewriteEngine On
+ 	RewriteBase {base}
+diff --git a/themes/default/search.php b/themes/default/search.php
+index 480050b..78b283f 100644
+--- a/themes/default/search.php
++++ b/themes/default/search.php
+@@ -4,7 +4,7 @@
+ 
+ <?php if(has_search_results()): ?>
+ 	<ul class="items">
+-		<?php $i = 0; while(posts()): $i++; ?>
++		<?php $i = 0; while(search_results()): $i++; ?>
+ 		<li style="background: hsl(215,28%,<?php echo round((($i / posts_per_page()) * 20) + 20); ?>%);">
+ 			<article class="wrap">
+ 				<h2>

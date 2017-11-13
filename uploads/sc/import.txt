@@ -1,0 +1,121 @@
+<?php
+//Roy D 2008
+//Import Wordpress database into Sweetcron database
+
+//Getting started.
+echo "Starting...<br />";
+
+//Wordpress database info
+$sqlhost = "wordpress_database_server";
+$sqllogin = "wordpress_database_username";
+$sqlpass = "wordpress_database_password";
+$sqldb = "wordpress_databasename";
+
+//SweetCron database info
+$sqlhostsc = "sweetcron_database_server";
+$sqlloginsc = "sweetcron_database_username";
+$sqlpasssc = "sweetcron_database_password";
+$sqldbsc = "sweetcron_databasename";
+
+//Database connection functions
+function dbConnect(){
+	global $sqlhost,$sqllogin,$sqlpass,$sqldb;
+	$link = mysql_connect($sqlhost, $sqllogin, $sqlpass) or die("There was an error connecting to the database. Please go back and try again or contact the administrator. Notice #1.");
+  	mysql_select_db($sqldb, $link) or die("There was an error connecting to the database. Please go back and try again or contact the administrator. Notice #2.");
+}
+function dbConnectb(){
+	global $sqlhostsc,$sqlloginsc,$sqlpasssc,$sqldbsc;
+	$linkb = mysql_connect($sqlhostsc, $sqlloginsc, $sqlpasssc) or die("There was an error connecting to the database. Please go back and try again or contact the administrator. Notice #1b.");
+  	mysql_select_db($sqldbsc, $linkb) or die("There was an error connecting to the database. Please go back and try again or contact the administrator. Notice #2b.");
+}
+function dbClose(){
+	mysql_close();
+}
+
+//Import tags
+$sqltag = "SELECT term_id,name,slug FROM wp_terms WHERE (term_id > 2) ORDER BY term_id";
+dbConnect();
+$resultcomm = mysql_query($sqltag);
+dbClose();
+$numte = mysql_num_rows($resultcomm);
+$thelist = "";
+if ($numte < 1) {
+	echo "Failed to pull in tags from Wordpress<br />";
+}else{
+	for ($i=0; $i<$numte; $i++) {
+		$return[$i] = mysql_fetch_row($resultcomm);
+		$theaddsql = "INSERT INTO sc_tags (tag_id,name,slug) VALUES (".$return[$i][0].",'".$return[$i][1]."','".$return[$i][2]."')";
+		dbConnectb();
+		$resulttadd = mysql_query($theaddsql);
+		$lasttid = mysql_insert_id();
+		dbClose();
+	}
+}
+
+//Import tag relationships
+$sqltag = "SELECT object_id,term_taxonomy_id FROM wp_term_relationships WHERE (term_taxonomy_id > 2) ORDER BY object_id";
+dbConnect();
+$resultcomm = mysql_query($sqltag);
+dbClose();
+$numte = mysql_num_rows($resultcomm);
+$thelist = "";
+if ($numte < 1) {
+	echo "Failed to pull in tag relationships from Wordpress<br />";
+}else{
+	for ($i=0; $i<$numte; $i++) {
+		$return[$i] = mysql_fetch_row($resultcomm);
+		$theaddsql = "INSERT INTO sc_tag_relationships (item_id,tag_id) VALUES (".$return[$i][0].",".$return[$i][1].")";
+		dbConnectb();
+		$resulttadd = mysql_query($theaddsql);
+		$lasttid = mysql_insert_id();
+		dbClose();
+	}
+}
+
+//Import posts
+$sqltag = "SELECT id,post_date,post_content,post_title,post_category,post_name FROM wp_posts WHERE (post_type='post') ORDER BY id";
+dbConnect();
+$resultcomm = mysql_query($sqltag);
+dbClose();
+$numte = mysql_num_rows($resultcomm);
+$thelist = "";
+if ($numte < 1) {
+	echo "Failed to pull in posts from Wordpress<br />";
+}else{
+	for ($i=0; $i<$numte; $i++) {
+		$return[$i] = mysql_fetch_row($resultcomm);
+		$gotime = strtotime($return[$i][1]);
+		$sqltag = "SELECT sc_tag_relationships.tag_id, sc_tags.name FROM sc_tag_relationships JOIN sc_tags ON (sc_tag_relationships.tag_id = sc_tags.tag_id) WHERE (sc_tag_relationships.item_id=".$return[$i][0].")";
+		dbConnectb();
+		$resultcommb = mysql_query($sqltag);
+		dbClose();
+		$numtg = mysql_num_rows($resultcommb);
+		if ($numtg < 1) {
+			echo "no tags<br />";
+		}else{
+			$goarray = "";
+			$goarraycnt = $numtg;
+			for ($j=0; $j<$numtg; $j++) {
+				$returnb[$j] = mysql_fetch_row($resultcommb);
+				$thegrab = "";
+				$thegrab = $returnb[$j][1];
+				$goarray .= "i:".$j.";s:".strlen($thegrab).":\"".$thegrab."\";";
+			}
+		}
+		$gocontent = str_replace("'", "\'", $return[$i][2]);
+		$gotitle = str_replace("'", "\'", $return[$i][3]);
+		$theaddsql = "INSERT INTO sc_items (ID,item_date,item_content,item_title,item_name,item_data,item_feed_id) VALUES (".$return[$i][0].",".$gotime.",'".$gocontent."','".$gotitle."','".$return[$i][5]."','a:1:{s:4:\"tags\";a:".$goarraycnt.":{".$goarray."}}',0)";
+		echo $theaddsql."<br />";
+		dbConnectb();
+		$resulttadd = mysql_query($theaddsql);
+		$lasttid = mysql_insert_id();
+		dbClose();
+	}
+}
+
+//Count tag usage
+$theaddtsql = "UPDATE sc_tags SET count=(SELECT COUNT(*) FROM sc_tag_relationships WHERE sc_tag_relationships.tag_id=sc_tags.tag_id)";
+
+//Finished!
+echo "Done!";
+?>
