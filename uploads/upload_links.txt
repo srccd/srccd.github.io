@@ -1,0 +1,25 @@
+These files are stored for the following blog articles.
+
+anchor_patches
+https://medium.com/@srccd/more-anchor-goodness-9019759ea65d
+
+article_facebook
+https://medium.com/@srccd/add-facebook-comments-to-tumblr-blogs-d6b9efe2bec8
+https://medium.com/@srccd/add-facebook-comments-to-tumblr-blogs-v2-e45c3bd1dd9c
+https://medium.com/@srccd/add-facebook-comments-to-tumblr-blogs-v3-fb29d1483c0b
+
+article_rdio
+https://medium.com/@srccd/add-itunes-playlists-to-rdio-f5fecd0f083
+
+concert2013-jtjz
+https://medium.com/@srccd/justin-timberlake-and-jay-z-legends-of-the-summer-8c362ea84014
+couldn't embed, so not used right now
+
+portify
+https://medium.com/@srccd/transfer-your-rdio-playlists-to-google-play-music-all-access-2dd41959ddf
+
+sb
+https://medium.com/@srccd/smartbutler-for-gaim-86ec95bfa9bc
+
+sc
+https://medium.com/@srccd/sweetcron-to-the-rescue-e219b98ddbb0

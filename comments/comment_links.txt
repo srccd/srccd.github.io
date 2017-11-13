@@ -1,0 +1,28 @@
+These comment files are for the following blog articles.
+
+1
+https://medium.com/@srccd/thats-right-tags-8463dc35bd28
+
+2
+https://medium.com/@srccd/transfer-your-rdio-playlists-to-google-play-music-all-access-2dd41959ddf
+
+3
+https://medium.com/@srccd/hosting-minecraft-on-digitalocean-da1bea37e26c
+
+4 and 4b
+https://medium.com/@srccd/add-facebook-comments-to-tumblr-blogs-v3-fb29d1483c0b
+
+5
+https://medium.com/@srccd/another-anchor-cms-update-6204fa75753f
+
+6
+https://medium.com/@srccd/the-move-to-anchor-cms-1e4e261f15a7
+
+7
+https://medium.com/@srccd/add-itunes-playlists-to-rdio-f5fecd0f083
+
+8
+https://medium.com/@srccd/littlebigplanet-beta-58ec8e525ae4
+
+9
+https://medium.com/@srccd/photo-tagging-369f1d05299e
